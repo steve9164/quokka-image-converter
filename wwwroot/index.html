@@ -1,0 +1,23 @@
+<html>
+    <head>
+        <title>Quokka Image Converter</title>
+    </head>
+    <body>
+        <h1>Quokka Image Converter</h1>
+        <div>
+            <image id="source"></canvas>
+            <canvas id="monochrome"></canvas>
+        </div>
+        <form>
+            <input type="text" id="url" value="https://groklearning-cdn.com/static/images/challenge/ncss-logo-fb.png"/>
+            <button type="button" onclick="loadImage()">Load image</button>
+        </form>
+        <script>
+            function loadImage() {
+                var url = (document.getElementById("url") as HTMLInputElement).value;
+                var sourceImageElement: HTMLImageElement = document.getElementById("source");
+                
+            }
+        </script>
+    </body>
+</html>
