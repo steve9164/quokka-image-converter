@@ -97,42 +97,30 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
   const [temporaryUrl, setTemporaryUrl] = useState("");
   const classes = useImagePreviewStyles();
   return (
-    <>
-      <TextField
-        variant="filled"
-        label="Image URL"
-        value={temporaryUrl}
-        onChange={evt => setTemporaryUrl(evt.target.value)}
+    <div>
+      <img
+        className={classes.image}
+        alt="Source"
+        ref={imageEl}
+        src={url}
+        crossOrigin="anonymous"
+        onLoad={() =>
+          setQimz(processImage(imageEl.current!, monochromeCanvasEl.current!))
+        }
       />
-      <Button variant="contained" size="large">
-        Load image
-      </Button>
-
-      <div>
-        <img
-          className={classes.image}
-          alt="Source"
-          ref={imageEl}
-          src={url}
-          crossOrigin="anonymous"
-          onLoad={() =>
-            setQimz(processImage(imageEl.current!, monochromeCanvasEl.current!))
-          }
-        />
-        <div className={classes.previewBorder}>
-          <canvas ref={monochromeCanvasEl} />
-        </div>
-        <button
-          onClick={() => {
-            // Create a blob and download as a file
-            const blob = new Blob([qimz], { type: "application/octet-stream" });
-            saveAs(blob, "image.qimz");
-          }}
-        >
-          Download Qimz
-        </button>
+      <div className={classes.previewBorder}>
+        <canvas ref={monochromeCanvasEl} />
       </div>
-    </>
+      <button
+        onClick={() => {
+          // Create a blob and download as a file
+          const blob = new Blob([qimz], { type: "application/octet-stream" });
+          saveAs(blob, "image.qimz");
+        }}
+      >
+        Download Qimz
+      </button>
+    </div>
   );
 };
 
