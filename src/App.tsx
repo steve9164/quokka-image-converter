@@ -1,24 +1,17 @@
 import {
   Button,
-  Card,
-  CardActionArea,
-  CardActions,
-  CardContent,
-  CardMedia,
   Container,
   createMuiTheme,
   Divider,
   Grid,
   GridList,
   GridListTile,
-  IconButton,
   makeStyles,
   responsiveFontSizes,
   TextField,
   ThemeProvider,
   Typography
 } from "@material-ui/core";
-import DeleteIcon from "@material-ui/icons/Delete";
 import { saveAs } from "file-saver";
 import { observable } from "mobx";
 import { useObserver } from "mobx-react-lite";
@@ -146,45 +139,6 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
   );
 };
 
-const useStylesHistoryImage = makeStyles({
-  // card: { maxWidth: 200 },
-  media: { height: 160 },
-  delete: { marginLeft: "auto" }
-});
-
-interface HistoryImageProps {
-  url: string;
-  caption?: string;
-  onClick?: () => void;
-  onDelete?: () => void;
-}
-
-const HistoryImage: React.FC<HistoryImageProps> = ({
-  url,
-  caption,
-  onClick,
-  onDelete
-}) => {
-  const classes = useStylesHistoryImage();
-  return (
-    <Card>
-      <CardActionArea onClick={onClick}>
-        <CardMedia className={classes.media} image={url} />
-        <CardContent>
-          <Typography variant="body2" color="textSecondary" component="p">
-            {caption || url}
-          </Typography>
-        </CardContent>
-      </CardActionArea>
-      <CardActions>
-        <IconButton className={classes.delete} onClick={onDelete}>
-          <DeleteIcon />
-        </IconButton>
-      </CardActions>
-    </Card>
-  );
-};
-
 const theme = responsiveFontSizes(createMuiTheme(), { factor: 3 });
 
 const useAppStyles = makeStyles({
@@ -252,28 +206,6 @@ const App: React.FC = () => {
                 Choose from a loaded image below or load another by dragging and
                 dropping it onto this window or entering the URL of the image
               </Typography>
-              {/* <Grid container direction="row" spacing={2}>
-            {store.urls.get().map((url, i) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={url}>
-                <HistoryImage
-                  url={url}
-                  onClick={() => store.imageUrl.set(url)}
-                  onDelete={() => store.deleteUrl(i)}
-                />
-              </Grid>
-            ))}
-            {store.localImages.get().map(({ name, data }, i) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={data}>
-                <HistoryImage
-                  key={data}
-                  caption={name}
-                  url={data}
-                  onClick={() => store.imageUrl.set(data)}
-                  onDelete={() => store.deleteLocalImage(i)}
-                />
-              </Grid>
-            ))}
-          </Grid> */}
               <GridList className={classes.gridList} cols={4}>
                 {store.urls.get().map((url, i) => (
                   <GridListTile key={url}>
