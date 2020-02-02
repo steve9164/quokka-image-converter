@@ -77,7 +77,7 @@ function processImage(
 const useImagePreviewStyles = makeStyles({
   image: {
     maxHeight: 288,
-    maxWidth: 512
+    maxWidth: "calc(100vw - 32px)"
   },
   previewBorder: {
     borderWidth: 1,
@@ -98,8 +98,8 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
   const [qimz, setQimz] = useState();
   const classes = useImagePreviewStyles();
   return (
-    <Grid container spacing={2} direction="row">
-      <Grid item sm={6} md={4} lg={3}>
+    <Grid container spacing={2} direction="column">
+      <Grid item>
         <Typography>Image preview:</Typography>
         <img
           className={classes.image}
@@ -112,7 +112,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
           }
         />
       </Grid>
-      <Grid item container direction="column" spacing={1} sm={6} md={4} lg={3}>
+      <Grid item container direction="column" spacing={1}>
         <Grid item>
           <Typography>Quokka monochrome preview:</Typography>
           <div className={classes.previewBorder}>
@@ -145,6 +145,10 @@ const useAppStyles = makeStyles({
   gridList: {
     flexWrap: "nowrap",
     transform: "translateZ(0)"
+  },
+  restrictGridWidth: {
+    // Hacky, but needed, otherwise the GridList breaks horizontally out of the page
+    maxWidth: "calc(100vw - 32px)"
   }
 });
 
@@ -201,12 +205,12 @@ const App: React.FC = () => {
               <ImagePreview url={store.imageUrl.get()} />
             </Grid>
             <Divider />
-            <Grid item>
+            <Grid item className={classes.restrictGridWidth}>
               <Typography>
                 Choose from a loaded image below or load another by dragging and
                 dropping it onto this window or entering the URL of the image
               </Typography>
-              <GridList className={classes.gridList} cols={4}>
+              <GridList className={classes.gridList} cols={4} spacing={2}>
                 {store.urls.get().map((url, i) => (
                   <GridListTile key={url}>
                     <img
