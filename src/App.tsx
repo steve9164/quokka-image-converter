@@ -2,20 +2,29 @@ import {
   Button,
   Card,
   CardActionArea,
+  CardActions,
   CardContent,
   CardMedia,
   Container,
+  createMuiTheme,
+  Divider,
   Grid,
+  GridList,
+  GridListTile,
+  IconButton,
   makeStyles,
+  responsiveFontSizes,
   TextField,
+  ThemeProvider,
   Typography
 } from "@material-ui/core";
+import DeleteIcon from "@material-ui/icons/Delete";
 import { saveAs } from "file-saver";
-import { DropzoneArea } from "material-ui-dropzone";
 import { observable } from "mobx";
 import { useObserver } from "mobx-react-lite";
 import pako from "pako";
 import React, { useRef, useState } from "react";
+import FileDropZone from "./FileDropZone";
 
 const QUOKKA_OLED_WIDTH = 128;
 const QUOKKA_OLED_HEIGHT = 64;
@@ -74,7 +83,7 @@ function processImage(
 
 const useImagePreviewStyles = makeStyles({
   image: {
-    maxHeight: 512,
+    maxHeight: 288,
     maxWidth: 512
   },
   previewBorder: {
@@ -94,51 +103,67 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
   const imageEl = useRef<HTMLImageElement>(null);
   const monochromeCanvasEl = useRef<HTMLCanvasElement>(null);
   const [qimz, setQimz] = useState();
-  const [temporaryUrl, setTemporaryUrl] = useState("");
   const classes = useImagePreviewStyles();
   return (
-    <div>
-      <img
-        className={classes.image}
-        alt="Source"
-        ref={imageEl}
-        src={url}
-        crossOrigin="anonymous"
-        onLoad={() =>
-          setQimz(processImage(imageEl.current!, monochromeCanvasEl.current!))
-        }
-      />
-      <div className={classes.previewBorder}>
-        <canvas ref={monochromeCanvasEl} />
-      </div>
-      <button
-        onClick={() => {
-          // Create a blob and download as a file
-          const blob = new Blob([qimz], { type: "application/octet-stream" });
-          saveAs(blob, "image.qimz");
-        }}
-      >
-        Download Qimz
-      </button>
-    </div>
+    <Grid container spacing={2} direction="row">
+      <Grid item sm={6} md={4} lg={3}>
+        <Typography>Image preview:</Typography>
+        <img
+          className={classes.image}
+          alt="Source"
+          ref={imageEl}
+          src={url}
+          crossOrigin="anonymous"
+          onLoad={() =>
+            setQimz(processImage(imageEl.current!, monochromeCanvasEl.current!))
+          }
+        />
+      </Grid>
+      <Grid item container direction="column" spacing={1} sm={6} md={4} lg={3}>
+        <Grid item>
+          <Typography>Quokka monochrome preview:</Typography>
+          <div className={classes.previewBorder}>
+            <canvas ref={monochromeCanvasEl} />
+          </div>
+        </Grid>
+        <Grid item>
+          <Button
+            onClick={() => {
+              // Create a blob and download as a file
+              const blob = new Blob([qimz], {
+                type: "application/octet-stream"
+              });
+              saveAs(blob, "image.qimz");
+            }}
+            color="primary"
+            variant="outlined"
+          >
+            Download Qimz
+          </Button>
+        </Grid>
+      </Grid>
+    </Grid>
   );
 };
 
 const useStylesHistoryImage = makeStyles({
   // card: { maxWidth: 200 },
-  media: { height: 160 }
+  media: { height: 160 },
+  delete: { marginLeft: "auto" }
 });
 
 interface HistoryImageProps {
   url: string;
   caption?: string;
   onClick?: () => void;
+  onDelete?: () => void;
 }
 
 const HistoryImage: React.FC<HistoryImageProps> = ({
   url,
   caption,
-  onClick
+  onClick,
+  onDelete
 }) => {
   const classes = useStylesHistoryImage();
   return (
@@ -151,9 +176,23 @@ const HistoryImage: React.FC<HistoryImageProps> = ({
           </Typography>
         </CardContent>
       </CardActionArea>
+      <CardActions>
+        <IconButton className={classes.delete} onClick={onDelete}>
+          <DeleteIcon />
+        </IconButton>
+      </CardActions>
     </Card>
   );
 };
+
+const theme = responsiveFontSizes(createMuiTheme(), { factor: 3 });
+
+const useAppStyles = makeStyles({
+  gridList: {
+    flexWrap: "nowrap",
+    transform: "translateZ(0)"
+  }
+});
 
 interface IDraggedImage {
   readonly data: string;
@@ -168,70 +207,119 @@ const createStore = () => ({
   addUrl(url: string) {
     this.urls.set([...this.urls.get(), url]);
   },
-  removeUrl(index: number) {
+  deleteUrl(index: number) {
     const cloned = this.urls.get().slice();
     cloned.splice(index, 1);
     this.urls.set(cloned);
   },
   imageUrl: observable.box(DEFAULT_URL),
-  files: observable.box([] as IDraggedImage[]),
+  localImages: observable.box([] as IDraggedImage[]),
   addLocalImage(file: File) {
     const reader = new FileReader();
     const name = file.name;
     reader.onerror = () => console.log("file reading has failed");
     reader.onload = e => {
       const data = reader.result! as string;
-      this.files.set([...this.files.get(), { name, data }]);
+      this.localImages.set([...this.localImages.get(), { name, data }]);
     };
     reader.readAsDataURL(file);
+  },
+  deleteLocalImage(index: number) {
+    const cloned = this.localImages.get().slice();
+    cloned.splice(index, 1);
+    this.localImages.set(cloned);
   }
 });
 
 const App: React.FC = () => {
-  const [store, _] = useState(createStore());
+  const [store] = useState(createStore());
   const [url, setUrl] = useState("");
 
+  const classes = useAppStyles();
+
   return useObserver(() => (
-    <Container>
-      <Typography variant="h2">Quokka Image Converter</Typography>
-      <ImagePreview url={store.imageUrl.get()} />
-      <Grid container direction="row" justify="center" spacing={2}>
-        {store.urls.get().map(url => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={url}>
-            <HistoryImage url={url} onClick={() => store.imageUrl.set(url)} />
+    <ThemeProvider theme={theme}>
+      <FileDropZone onDrop={file => store.addLocalImage(file)} imagesOnly>
+        <Container>
+          <Grid container direction="column" spacing={2}>
+            <Grid item>
+              <Typography variant="h2">Quokka Image Converter</Typography>
+              <ImagePreview url={store.imageUrl.get()} />
+            </Grid>
+            <Divider />
+            <Grid item>
+              <Typography>
+                Choose from a loaded image below or load another by dragging and
+                dropping it onto this window or entering the URL of the image
+              </Typography>
+              {/* <Grid container direction="row" spacing={2}>
+            {store.urls.get().map((url, i) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={url}>
+                <HistoryImage
+                  url={url}
+                  onClick={() => store.imageUrl.set(url)}
+                  onDelete={() => store.deleteUrl(i)}
+                />
+              </Grid>
+            ))}
+            {store.localImages.get().map(({ name, data }, i) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={data}>
+                <HistoryImage
+                  key={data}
+                  caption={name}
+                  url={data}
+                  onClick={() => store.imageUrl.set(data)}
+                  onDelete={() => store.deleteLocalImage(i)}
+                />
+              </Grid>
+            ))}
+          </Grid> */}
+              <GridList className={classes.gridList} cols={4}>
+                {store.urls.get().map((url, i) => (
+                  <GridListTile key={url}>
+                    <img
+                      src={url}
+                      alt={url}
+                      onClick={() => store.imageUrl.set(url)}
+                    />
+                  </GridListTile>
+                ))}
+                {store.localImages.get().map(({ name, data }, i) => (
+                  <GridListTile key={data}>
+                    <img
+                      key={data}
+                      alt={name}
+                      src={data}
+                      onClick={() => store.imageUrl.set(data)}
+                    />
+                  </GridListTile>
+                ))}
+              </GridList>
+            </Grid>
+            <Grid item>
+              <form
+                noValidate
+                onSubmit={evt => {
+                  store.addUrl(url);
+                  evt.preventDefault();
+                }}
+              >
+                <TextField
+                  label="Image URL"
+                  value={url}
+                  onChange={evt => setUrl(evt.target.value)}
+                  variant="filled"
+                  size="small"
+                />
+                <Button type="submit" variant="contained" size="large">
+                  Add image
+                </Button>
+              </form>
+            </Grid>
           </Grid>
-        ))}
-        {store.files.get().map(({ name, data }) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={data}>
-            <HistoryImage
-              key={data}
-              caption={name}
-              url={data}
-              onClick={() => store.imageUrl.set(data)}
-            />
-          </Grid>
-        ))}
-      </Grid>
-      <DropzoneArea
-        maxFileSize={20 * 1e6}
-        acceptedFiles={["image/*"]}
-        onDrop={file => store.addLocalImage(file)}
-      />
-      <form
-        noValidate
-        onSubmit={evt => {
-          store.addUrl(url);
-          evt.preventDefault();
-        }}
-      >
-        <input
-          type="text"
-          value={url}
-          onChange={evt => setUrl(evt.target.value)}
-        />
-        <input type="submit" value="Add URL" />
-      </form>
-    </Container>
+        </Container>
+      </FileDropZone>
+    </ThemeProvider>
   ));
 };
 

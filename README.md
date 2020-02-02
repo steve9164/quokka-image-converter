@@ -1,5 +1,7 @@
 # quokka-image-converter
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/ba111509-9058-43e6-a410-1e6c06634f8d/deploy-status)](https://app.netlify.com/sites/awesome-einstein-89ff12/deploys)
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
