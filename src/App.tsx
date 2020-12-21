@@ -10,7 +10,7 @@ import {
   responsiveFontSizes,
   TextField,
   ThemeProvider,
-  Typography
+  Typography,
 } from "@material-ui/core";
 import { saveAs } from "file-saver";
 import { observable } from "mobx";
@@ -28,15 +28,22 @@ function isWhitePixel(rgba: Uint8Array | Uint8ClampedArray | number[]) {
 
 function processImage(
   source: HTMLImageElement,
-  dest: HTMLCanvasElement
+  dest: HTMLCanvasElement,
+  destWidth?: number,
+  destHeight?: number
 ): Uint8Array {
-  const scaleFactor = Math.min(
-    QUOKKA_OLED_WIDTH / source.width,
-    QUOKKA_OLED_HEIGHT / source.height,
-    1
-  );
-  const width = scaleFactor * source.width;
-  const height = scaleFactor * source.height;
+  let width, height;
+  if (destWidth !== undefined && destHeight !== undefined) {
+    width = destWidth;
+    height = destHeight;
+  } else {
+    const scaleFactor = Math.min(
+      QUOKKA_OLED_WIDTH / source.width,
+      QUOKKA_OLED_HEIGHT / source.height
+    );
+    width = scaleFactor * source.width;
+    height = scaleFactor * source.height;
+  }
   dest.width = width;
   dest.height = height;
 
@@ -77,15 +84,15 @@ function processImage(
 const useImagePreviewStyles = makeStyles({
   image: {
     maxHeight: 288,
-    maxWidth: "calc(100vw - 32px)"
+    maxWidth: "calc(100vw - 32px)",
   },
   previewBorder: {
     borderWidth: 1,
     borderStyle: "solid",
     borderColor: "black",
     width: 128,
-    height: 64
-  }
+    height: 64,
+  },
 });
 
 interface ImagePreviewProps {
@@ -95,7 +102,7 @@ interface ImagePreviewProps {
 const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
   const imageEl = useRef<HTMLImageElement>(null);
   const monochromeCanvasEl = useRef<HTMLCanvasElement>(null);
-  const [qimz, setQimz] = useState();
+  const [qimz, setQimz] = useState<Uint8Array>();
   const classes = useImagePreviewStyles();
   return (
     <Grid container spacing={2} direction="column">
@@ -121,10 +128,11 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
         </Grid>
         <Grid item>
           <Button
+            disabled={qimz === undefined}
             onClick={() => {
               // Create a blob and download as a file
-              const blob = new Blob([qimz], {
-                type: "application/octet-stream"
+              const blob = new Blob([qimz!], {
+                type: "application/octet-stream",
               });
               saveAs(blob, "image.qimz");
             }}
@@ -144,12 +152,12 @@ const theme = responsiveFontSizes(createMuiTheme(), { factor: 3 });
 const useAppStyles = makeStyles({
   gridList: {
     flexWrap: "nowrap",
-    transform: "translateZ(0)"
+    transform: "translateZ(0)",
   },
   restrictGridWidth: {
     // Hacky, but needed, otherwise the GridList breaks horizontally out of the page
-    maxWidth: "calc(100vw - 32px)"
-  }
+    maxWidth: "calc(100vw - 32px)",
+  },
 });
 
 interface IDraggedImage {
@@ -176,7 +184,7 @@ const createStore = () => ({
     const reader = new FileReader();
     const name = file.name;
     reader.onerror = () => console.log("file reading has failed");
-    reader.onload = e => {
+    reader.onload = (e) => {
       const data = reader.result! as string;
       this.localImages.set([...this.localImages.get(), { name, data }]);
     };
@@ -186,7 +194,7 @@ const createStore = () => ({
     const cloned = this.localImages.get().slice();
     cloned.splice(index, 1);
     this.localImages.set(cloned);
-  }
+  },
 });
 
 const App: React.FC = () => {
@@ -197,7 +205,7 @@ const App: React.FC = () => {
 
   return useObserver(() => (
     <ThemeProvider theme={theme}>
-      <FileDropZone onDrop={file => store.addLocalImage(file)} imagesOnly>
+      <FileDropZone onDrop={(file) => store.addLocalImage(file)} imagesOnly>
         <Container>
           <Grid container direction="column" spacing={2}>
             <Grid item>
@@ -235,7 +243,7 @@ const App: React.FC = () => {
             <Grid item>
               <form
                 noValidate
-                onSubmit={evt => {
+                onSubmit={(evt) => {
                   store.addUrl(url);
                   evt.preventDefault();
                 }}
@@ -243,7 +251,7 @@ const App: React.FC = () => {
                 <TextField
                   label="Image URL"
                   value={url}
-                  onChange={evt => setUrl(evt.target.value)}
+                  onChange={(evt) => setUrl(evt.target.value)}
                   variant="filled"
                   size="small"
                 />
