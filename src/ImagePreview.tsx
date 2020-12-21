@@ -8,11 +8,10 @@ import {
   TextField,
   Typography,
 } from "@material-ui/core";
-import { InvertColorsOffRounded } from "@material-ui/icons";
 import { autorun, observable } from "mobx";
-import { useLocalStore, useObserver } from "mobx-react-lite";
+import { useObserver } from "mobx-react-lite";
 import pako from "pako";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const QUOKKA_OLED_WIDTH = 128;
 const QUOKKA_OLED_HEIGHT = 64;
@@ -143,16 +142,32 @@ interface ImagePreviewProps {
   url: string;
 }
 
+let oldSourceRef: any = null;
+let oldDestinationRef: any = null;
+
 const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
-  const [qimz, setQimz] = useState<Uint8Array>();
   const [store] = useState(createStore);
   const classes = useImagePreviewStyles();
 
+  // This useEffect runs too much and crashes React
+  // Setting `store.qimz` causes source and dest to redraw, which causes the QIMZ to be generated again recursively forever
+  // Need to make sure that the img and canvas have a long lifetime
   useEffect(
     () =>
       autorun(() => {
+        console.log("Generating QIMZ");
         const source = store.sourceRef.get();
         const destination = store.destinationRef.get();
+        if (source !== oldSourceRef) {
+          console.log(`Source ref changed ${oldSourceRef} -> ${source}`);
+          oldSourceRef = source;
+        }
+        if (destination !== oldDestinationRef) {
+          console.log(
+            `Destination ref changed ${oldDestinationRef} -> ${destination}`
+          );
+          oldDestinationRef = destination;
+        }
         const widthInt = parseInt(store.outputWidth.get());
         const heightInt = parseInt(store.outputHeight.get());
         if (
@@ -202,7 +217,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
       <Grid container direction="column">
         <Grid item>
           <FormControlLabel
-            label="Lock aspect ratio"
+            label="Use original aspect ratio"
             control={
               <Checkbox
                 checked={store.lockAspectRatio.get()}
@@ -271,10 +286,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
         </Grid>
         <Grid item>
           <Button
-            disabled={qimz === undefined}
+            disabled={store.qimz.get() === undefined}
             onClick={() => {
               // Create a blob and download as a file
-              const blob = new Blob([qimz!], {
+              const blob = new Blob([store.qimz.get()!], {
                 type: "application/octet-stream",
               });
               saveAs(blob, "image.qimz");
