@@ -4,8 +4,8 @@ import React from "react";
 const useStyles = makeStyles({
   dropContainer: {
     height: "100vh",
-    width: "100vw"
-  }
+    width: "100vw",
+  },
 });
 
 interface FileDropZoneProps {
@@ -16,13 +16,13 @@ interface FileDropZoneProps {
 const FileDropZone: React.FC<FileDropZoneProps> = ({
   onDrop,
   imagesOnly,
-  children
+  children,
 }) => {
   const classes = useStyles();
   return (
     <div
       className={classes.dropContainer}
-      onDrop={e => {
+      onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
         for (let i = 0; i < e.dataTransfer.files.length; i++) {
@@ -34,15 +34,15 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({
           }
         }
       }}
-      onDragEnter={e => {
+      onDragEnter={(e) => {
         e.preventDefault();
         e.stopPropagation();
         e.dataTransfer.dropEffect = "copy";
       }}
-      onDragOver={e => {
+      onDragOver={(e) => {
         e.preventDefault();
       }}
-      onDragLeave={e => {}}
+      onDragLeave={(e) => {}}
     >
       {children}
     </div>
