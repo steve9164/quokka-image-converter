@@ -83,6 +83,7 @@ function processImage(
     data[i] = monochrome;
     data[i + 1] = monochrome;
     data[i + 2] = monochrome;
+    data[i + 3] = 255;
   }
   ctx.putImageData(imageData, 0, 0);
   // Iterate again, saving to qimz
@@ -217,8 +218,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
               QUOKKA_OLED_HEIGHT / source.height,
               1
             );
-            store.outputWidth.set("" + scaleFactor * source.width);
-            store.outputHeight.set("" + scaleFactor * source.height);
+            store.outputWidth.set("" + Math.round(scaleFactor * source.width));
+            store.outputHeight.set(
+              "" + Math.round(scaleFactor * source.height)
+            );
           }}
         />
       </Grid>
