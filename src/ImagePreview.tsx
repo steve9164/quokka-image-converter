@@ -50,10 +50,9 @@ function isWhitePixel(
   whiteThreshold: number,
   invert: boolean
 ) {
-  return (
-    0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2] > whiteThreshold !==
-    invert
-  );
+  const isWhite =
+    0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2] > whiteThreshold;
+  return isWhite !== invert;
 }
 
 function processImage(
