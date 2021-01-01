@@ -125,7 +125,7 @@ const useImagePreviewStyles = makeStyles({
     height: 64,
   },
   previewCanvas: {
-    position: "fixed",
+    verticalAlign: "top",
   },
 });
 
