@@ -32,7 +32,9 @@ const createStore = () => ({
     const heightInt = parseInt(height);
     const source = this.sourceRef.get();
     if (this.lockAspectRatio.get() && !isNaN(heightInt) && source !== null) {
-      this.outputWidth.set("" + (source.width * heightInt) / source.height);
+      this.outputWidth.set(
+        "" + Math.round((source.width * heightInt) / source.height)
+      );
     }
   },
   onWidthChange(width: string) {
@@ -40,7 +42,9 @@ const createStore = () => ({
     const widthInt = parseInt(width);
     const source = this.sourceRef.get();
     if (this.lockAspectRatio.get() && !isNaN(widthInt) && source !== null) {
-      this.outputHeight.set("" + (source.height * widthInt) / source.width);
+      this.outputHeight.set(
+        "" + Math.round((source.height * widthInt) / source.width)
+      );
     }
   },
 });

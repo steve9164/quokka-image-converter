@@ -47,8 +47,7 @@ interface IDraggedImage {
   readonly name: string;
 }
 
-const DEFAULT_URL =
-  "http://ci.terria.io/master/build/78303112301085744794e356ff2dca25.png";
+const DEFAULT_URL = "/star.png";
 
 const createStore = () => ({
   urls: observable.box([DEFAULT_URL]),
