@@ -8,10 +8,11 @@ import {
   TextField,
   Typography,
 } from "@material-ui/core";
+import { saveAs } from "file-saver";
 import { autorun, observable } from "mobx";
-import { useObserver } from "mobx-react-lite";
+import { observer } from "mobx-react-lite";
 import pako from "pako";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 const QUOKKA_OLED_WIDTH = 128;
 const QUOKKA_OLED_HEIGHT = 64;
@@ -124,6 +125,9 @@ const useImagePreviewStyles = makeStyles({
     width: 128,
     height: 64,
   },
+  previewCanvas: {
+    position: "fixed",
+  },
 });
 
 // Document ImagePreview width/height editing
@@ -145,7 +149,7 @@ interface ImagePreviewProps {
 let oldSourceRef: any = null;
 let oldDestinationRef: any = null;
 
-const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
+const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
   const [store] = useState(createStore);
   const classes = useImagePreviewStyles();
 
@@ -188,17 +192,22 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
           );
         }
       }),
-    []
+    [store]
   );
 
-  return useObserver(() => (
+  const setSourceRef = useCallback((el) => store.sourceRef.set(el), [store]);
+  const setDestinationRef = useCallback((el) => store.destinationRef.set(el), [
+    store,
+  ]);
+
+  return (
     <Grid container spacing={2} direction="column">
       <Grid item>
-        <Typography>Image preview:</Typography>
+        <Typography>Selected image preview:</Typography>
         <img
           className={classes.image}
           alt="Source"
-          ref={(el) => store.sourceRef.set(el)}
+          ref={setSourceRef}
           src={url}
           crossOrigin="anonymous"
           onLoad={() => {
@@ -214,7 +223,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
           }}
         />
       </Grid>
-      <Grid container direction="column">
+      <Grid item container direction="column">
         <Grid item>
           <FormControlLabel
             label="Use original aspect ratio"
@@ -281,7 +290,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
         <Grid item>
           <Typography>Quokka monochrome preview:</Typography>
           <div className={classes.previewBorder}>
-            <canvas ref={(el) => store.destinationRef.set(el)} />
+            <canvas className={classes.previewCanvas} ref={setDestinationRef} />
           </div>
         </Grid>
         <Grid item>
@@ -302,7 +311,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url }) => {
         </Grid>
       </Grid>
     </Grid>
-  ));
-};
+  );
+});
 
 export default ImagePreview;
