@@ -47,7 +47,7 @@ interface IDraggedImage {
   readonly name: string;
 }
 
-const DEFAULT_URL = "/star.png";
+const DEFAULT_URL = "/example-star.png";
 
 const createStore = () => ({
   urls: observable.box([DEFAULT_URL]),
