@@ -9,45 +9,13 @@ import {
   Typography,
 } from "@mui/material";
 import { saveAs } from "file-saver";
-import { autorun, observable } from "mobx";
-import { observer } from "mobx-react-lite";
+import { action, autorun, runInAction } from "mobx";
+import { observer, useLocalObservable } from "mobx-react-lite";
 import pako from "pako";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect } from "react";
 
 const QUOKKA_OLED_WIDTH = 128;
 const QUOKKA_OLED_HEIGHT = 64;
-
-const createStore = () => ({
-  sourceRef: observable.box<HTMLImageElement | null>(null),
-  sourceLoaded: observable.box(false),
-  destinationRef: observable.box<HTMLCanvasElement | null>(null),
-  whiteThreshold: observable.box(127),
-  invert: observable.box(false),
-  qimz: observable.box<Uint8Array | undefined>(undefined),
-  outputWidth: observable.box(""),
-  outputHeight: observable.box(""),
-  lockAspectRatio: observable.box(true),
-  onHeightChange(height: string) {
-    this.outputHeight.set(height);
-    const heightInt = parseInt(height);
-    const source = this.sourceRef.get();
-    if (this.lockAspectRatio.get() && !isNaN(heightInt) && source !== null) {
-      this.outputWidth.set(
-        "" + Math.round((source.width * heightInt) / source.height)
-      );
-    }
-  },
-  onWidthChange(width: string) {
-    this.outputWidth.set(width);
-    const widthInt = parseInt(width);
-    const source = this.sourceRef.get();
-    if (this.lockAspectRatio.get() && !isNaN(widthInt) && source !== null) {
-      this.outputHeight.set(
-        "" + Math.round((source.height * widthInt) / source.width)
-      );
-    }
-  },
-});
 
 function isWhitePixel(
   rgba: Uint8Array | Uint8ClampedArray | number[],
@@ -133,7 +101,65 @@ interface ImagePreviewProps {
 }
 
 const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
-  const [store] = useState(createStore);
+  const store = useLocalObservable(() => ({
+    sourceRef: null as HTMLImageElement | null,
+    setSourceRef(ref: HTMLImageElement | null) {
+      this.sourceRef = ref;
+    },
+    sourceLoaded: false,
+    setSourceLoaded(val: boolean) {
+      this.sourceLoaded = val;
+    },
+    destinationRef: null as HTMLCanvasElement | null,
+    setDestinationRef(ref: HTMLCanvasElement | null) {
+      this.destinationRef = ref;
+    },
+    whiteThreshold: 127,
+    setWhiteThreshold(val: number) {
+      this.whiteThreshold = val;
+    },
+    invert: false,
+    setInvert(val: boolean) {
+      this.invert = val;
+    },
+    qimz: undefined as Uint8Array | undefined,
+    setQimz(bytes: Uint8Array | undefined) {
+      this.qimz = bytes;
+    },
+    outputWidth: "",
+    setOutputWidth(val: string) {
+      this.outputWidth = val;
+    },
+    outputHeight: "",
+    setOutputHeight(val: string) {
+      this.outputHeight = val;
+    },
+
+    lockAspectRatio: true,
+    setLockAspectRatio(val: boolean) {
+      this.lockAspectRatio = val;
+    },
+    onHeightChange(height: string) {
+      this.setOutputHeight(height);
+      const heightInt = parseInt(height);
+      const source = this.sourceRef;
+      if (this.lockAspectRatio && !isNaN(heightInt) && source !== null) {
+        this.setOutputWidth(
+          "" + Math.round((source.width * heightInt) / source.height)
+        );
+      }
+    },
+    onWidthChange(width: string) {
+      this.setOutputWidth(width);
+      const widthInt = parseInt(width);
+      const source = this.sourceRef;
+      if (this.lockAspectRatio && !isNaN(widthInt) && source !== null) {
+        this.setOutputHeight(
+          "" + Math.round((source.height * widthInt) / source.width)
+        );
+      }
+    },
+  }));
 
   // This useEffect runs too much and crashes React
   // Setting `store.qimz` causes source and dest to redraw, which causes the QIMZ to be generated again recursively forever
@@ -142,39 +168,35 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
     () =>
       autorun(() => {
         console.log("Generating QIMZ");
-        const source = store.sourceRef.get();
-        const destination = store.destinationRef.get();
-        const widthInt = parseInt(store.outputWidth.get());
-        const heightInt = parseInt(store.outputHeight.get());
+        const source = store.sourceRef;
+        const destination = store.destinationRef;
+        const widthInt = parseInt(store.outputWidth);
+        const heightInt = parseInt(store.outputHeight);
         if (
           source !== null &&
           destination !== null &&
           !isNaN(widthInt) &&
           !isNaN(heightInt)
         ) {
-          store.qimz.set(
-            processImage(
-              source,
-              destination,
-              widthInt,
-              heightInt,
-              store.whiteThreshold.get(),
-              store.invert.get()
-            )
+          const data = processImage(
+            source,
+            destination,
+            widthInt,
+            heightInt,
+            store.whiteThreshold,
+            store.invert
           );
+
+          runInAction(() => store.setQimz(data));
         }
       }),
     [store]
   );
 
-  const setSourceRef = useCallback(
-    (el: HTMLImageElement | null) => store.sourceRef.set(el),
-    [store]
-  );
-  const setDestinationRef = useCallback(
-    (el: HTMLCanvasElement | null) => store.destinationRef.set(el),
-    [store]
-  );
+  const setSourceRef = useCallback(action(store.setSourceRef), [store]);
+  const setDestinationRef = useCallback(action(store.setDestinationRef), [
+    store,
+  ]);
 
   return (
     <Grid container spacing={2} direction="column">
@@ -190,19 +212,17 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
           ref={setSourceRef}
           src={url}
           crossOrigin="anonymous"
-          onLoad={() => {
-            store.sourceLoaded.set(true);
-            const source = store.sourceRef.get()!;
+          onLoad={action(() => {
+            store.setSourceLoaded(true);
+            const source = store.sourceRef!;
             const scaleFactor = Math.min(
               QUOKKA_OLED_WIDTH / source.width,
               QUOKKA_OLED_HEIGHT / source.height,
               1
             );
-            store.outputWidth.set("" + Math.round(scaleFactor * source.width));
-            store.outputHeight.set(
-              "" + Math.round(scaleFactor * source.height)
-            );
-          }}
+            store.setOutputWidth("" + Math.round(scaleFactor * source.width));
+            store.setOutputHeight("" + Math.round(scaleFactor * source.height));
+          })}
         />
       </Grid>
       <Grid item container direction="column" spacing={2}>
@@ -212,8 +232,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
               label="Use original aspect ratio"
               control={
                 <Checkbox
-                  checked={store.lockAspectRatio.get()}
-                  onChange={(_, checked) => store.lockAspectRatio.set(checked)}
+                  checked={store.lockAspectRatio}
+                  onChange={action((_, checked) =>
+                    store.setLockAspectRatio(checked)
+                  )}
                 />
               }
             />
@@ -221,13 +243,13 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
           <Grid item>
             <TextField
               label="Width"
-              disabled={!store.sourceLoaded.get()}
-              value={store.outputWidth.get()}
+              disabled={!store.sourceLoaded}
+              value={store.outputWidth}
               type="number"
-              onChange={(evt) => {
+              onChange={action((evt) => {
                 const width = evt.target.value;
                 store.onWidthChange(width);
-              }}
+              })}
               variant="filled"
               size="small"
             />
@@ -235,13 +257,13 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
           <Grid item>
             <TextField
               label="Height"
-              disabled={!store.sourceLoaded.get()}
-              value={store.outputHeight.get()}
+              disabled={!store.sourceLoaded}
+              value={store.outputHeight}
               type="number"
-              onChange={(evt) => {
+              onChange={action((evt) => {
                 const height = evt.target.value;
                 store.onHeightChange(height);
-              }}
+              })}
               variant="filled"
               size="small"
             />
@@ -255,8 +277,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
             <Slider
               sx={{ maxWidth: "223px" }}
               aria-labelledby="white-threshold-label"
-              value={store.whiteThreshold.get()}
-              onChange={(_, val) => store.whiteThreshold.set(val as number)}
+              value={store.whiteThreshold}
+              onChange={action((_, val) =>
+                store.setWhiteThreshold(val as number)
+              )}
               min={0}
               max={255}
               valueLabelDisplay="auto"
@@ -267,8 +291,8 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
               label="Invert"
               control={
                 <Checkbox
-                  checked={store.invert.get()}
-                  onChange={(_, checked) => store.invert.set(checked)}
+                  checked={store.invert}
+                  onChange={action((_, checked) => store.setInvert(checked))}
                 />
               }
             />
@@ -298,10 +322,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
         </Grid>
         <Grid item>
           <Button
-            disabled={store.qimz.get() === undefined}
+            disabled={store.qimz === undefined}
             onClick={() => {
               // Create a blob and download as a file
-              const blob = new Blob([store.qimz.get()!], {
+              const blob = new Blob([runInAction(() => store.qimz!)], {
                 type: "application/octet-stream",
               });
               saveAs(blob, "image.qimz");

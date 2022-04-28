@@ -15,6 +15,7 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
+import { action } from "mobx";
 import { observer, useLocalObservable } from "mobx-react-lite";
 import React, { useState } from "react";
 import FileDropZone from "./FileDropZone";
@@ -107,7 +108,12 @@ const App: React.FC = observer(() => {
                       actionIcon={
                         <IconButton
                           aria-label={`delete ${name}`}
-                          onClick={() => store.removeImage(i)}
+                          onClick={action(
+                            (evt: React.MouseEvent<HTMLButtonElement>) => {
+                              evt.stopPropagation();
+                              store.removeImage(i);
+                            }
+                          )}
                         >
                           <DeleteIcon sx={{ color: "black" }} />
                         </IconButton>
@@ -121,17 +127,19 @@ const App: React.FC = observer(() => {
             <Grid item>
               <form
                 noValidate
-                onSubmit={(evt) => {
+                onSubmit={action((evt) => {
                   store.addImage(textboxUrl, textboxUrl);
                   evt.preventDefault();
-                }}
+                })}
               >
                 <Grid container direction="row" spacing={1}>
                   <Grid item>
                     <TextField
                       label="Image URL"
                       value={textboxUrl}
-                      onChange={(evt) => setTextboxUrl(evt.target.value)}
+                      onChange={action((evt) =>
+                        setTextboxUrl(evt.target.value)
+                      )}
                       variant="outlined"
                       size="small"
                     />
@@ -154,7 +162,9 @@ const App: React.FC = observer(() => {
                       <Button
                         variant="contained"
                         size="medium"
-                        onClick={() => store.addImage(DEFAULT_URL, DEFAULT_URL)}
+                        onClick={action(() =>
+                          store.addImage(DEFAULT_URL, DEFAULT_URL)
+                        )}
                       >
                         Add an example image
                       </Button>
