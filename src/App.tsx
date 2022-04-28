@@ -74,8 +74,11 @@ const App: React.FC = observer(() => {
               }}
             >
               <Typography>
-                Choose from a loaded image below or load another by dragging and
-                dropping it onto this window or entering the URL of the image
+                {store.images.length > 0
+                  ? "Choose an image from below or load"
+                  : "Load"}{" "}
+                a new image by dragging and dropping the image onto this window
+                or entering the URL of the image
               </Typography>
               <ImageList
                 sx={{
@@ -86,20 +89,19 @@ const App: React.FC = observer(() => {
                 gap={2}
               >
                 {store.images.map(({ name, url }, i) => (
-                  <ImageListItem key={url}>
-                    <img
-                      src={url}
-                      alt={name}
-                      onClick={() => store.setActiveImageIndex(i)}
-                    />
+                  <ImageListItem
+                    key={url}
+                    onClick={action(() => store.setActiveImageIndex(i))}
+                  >
+                    <img src={url} alt={name} />
                     <ImageListItemBar
                       title={name}
                       sx={{
-                        background:
-                          "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 70%, rgba(0,0,0,0) 100%)",
-
                         "& .MuiImageListItemBar-title": {
-                          color: "primary.light",
+                          fontWeight: "bold",
+                          color: "black",
+                          textAlign: "center",
+                          lineHeight: "28px",
                         },
                       }}
                       actionIcon={
@@ -107,9 +109,10 @@ const App: React.FC = observer(() => {
                           aria-label={`delete ${name}`}
                           onClick={() => store.removeImage(i)}
                         >
-                          <DeleteIcon sx={{ color: "primary.light" }} />
+                          <DeleteIcon sx={{ color: "black" }} />
                         </IconButton>
                       }
+                      position="below"
                     />
                   </ImageListItem>
                 ))}
