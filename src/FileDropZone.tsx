@@ -1,27 +1,19 @@
-import { makeStyles } from "@material-ui/core";
-import React from "react";
-
-const useStyles = makeStyles({
-  dropContainer: {
-    height: "100vh",
-    width: "100vw",
-  },
-});
+import { Box } from "@mui/material";
+import React, { PropsWithChildren } from "react";
 
 interface FileDropZoneProps {
   onDrop: (file: File) => void;
   imagesOnly?: boolean;
 }
 
-const FileDropZone: React.FC<FileDropZoneProps> = ({
+const FileDropZone: React.FC<PropsWithChildren<FileDropZoneProps>> = ({
   onDrop,
   imagesOnly,
   children,
 }) => {
-  const classes = useStyles();
   return (
-    <div
-      className={classes.dropContainer}
+    <Box
+      sx={{ height: "100vh", width: "100vw" }}
       onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -45,7 +37,7 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({
       onDragLeave={(e) => {}}
     >
       {children}
-    </div>
+    </Box>
   );
 };
 

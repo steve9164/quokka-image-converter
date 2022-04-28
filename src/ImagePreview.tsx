@@ -1,13 +1,13 @@
 import {
+  Box,
   Button,
   Checkbox,
   FormControlLabel,
   Grid,
-  makeStyles,
   Slider,
   TextField,
   Typography,
-} from "@material-ui/core";
+} from "@mui/material";
 import { saveAs } from "file-saver";
 import { autorun, observable } from "mobx";
 import { observer } from "mobx-react-lite";
@@ -23,7 +23,7 @@ const createStore = () => ({
   destinationRef: observable.box<HTMLCanvasElement | null>(null),
   whiteThreshold: observable.box(127),
   invert: observable.box(false),
-  qimz: observable.box<Uint8Array>(undefined),
+  qimz: observable.box<Uint8Array | undefined>(undefined),
   outputWidth: observable.box(""),
   outputHeight: observable.box(""),
   lockAspectRatio: observable.box(true),
@@ -90,7 +90,6 @@ function processImage(
     data[i + 3] = 255;
   }
   ctx.putImageData(imageData, 0, 0);
-  // Iterate again, saving to qimz
   const pixelData = new Uint8Array(Math.ceil(imageData.data.length / 32.0));
   // Iterate over the image data turning each 8 pixels into a byte
   for (let i = 0; i < imageData.data.length; i += 32) {
@@ -117,23 +116,6 @@ function processImage(
   return qimz;
 }
 
-const useImagePreviewStyles = makeStyles({
-  image: {
-    maxHeight: 288,
-    maxWidth: "calc(100vw - 32px)",
-  },
-  previewBorder: {
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "black",
-    width: 128,
-    height: 64,
-  },
-  previewCanvas: {
-    verticalAlign: "top",
-  },
-});
-
 // Document ImagePreview width/height editing
 // User stories:
 // 1. I have a bunch of images that are all the same aspect ratio (or same size) and
@@ -150,12 +132,8 @@ interface ImagePreviewProps {
   url: string;
 }
 
-let oldSourceRef: any = null;
-let oldDestinationRef: any = null;
-
 const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
   const [store] = useState(createStore);
-  const classes = useImagePreviewStyles();
 
   // This useEffect runs too much and crashes React
   // Setting `store.qimz` causes source and dest to redraw, which causes the QIMZ to be generated again recursively forever
@@ -166,16 +144,6 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
         console.log("Generating QIMZ");
         const source = store.sourceRef.get();
         const destination = store.destinationRef.get();
-        if (source !== oldSourceRef) {
-          console.log(`Source ref changed ${oldSourceRef} -> ${source}`);
-          oldSourceRef = source;
-        }
-        if (destination !== oldDestinationRef) {
-          console.log(
-            `Destination ref changed ${oldDestinationRef} -> ${destination}`
-          );
-          oldDestinationRef = destination;
-        }
         const widthInt = parseInt(store.outputWidth.get());
         const heightInt = parseInt(store.outputHeight.get());
         if (
@@ -199,17 +167,25 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
     [store]
   );
 
-  const setSourceRef = useCallback((el) => store.sourceRef.set(el), [store]);
-  const setDestinationRef = useCallback((el) => store.destinationRef.set(el), [
-    store,
-  ]);
+  const setSourceRef = useCallback(
+    (el: HTMLImageElement | null) => store.sourceRef.set(el),
+    [store]
+  );
+  const setDestinationRef = useCallback(
+    (el: HTMLCanvasElement | null) => store.destinationRef.set(el),
+    [store]
+  );
 
   return (
     <Grid container spacing={2} direction="column">
       <Grid item>
         <Typography>Selected image preview:</Typography>
-        <img
-          className={classes.image}
+        <Box
+          component="img"
+          sx={{
+            maxHeight: 288,
+            maxWidth: "calc(100vw - 32px)",
+          }}
           alt="Source"
           ref={setSourceRef}
           src={url}
@@ -229,75 +205,96 @@ const ImagePreview: React.FC<ImagePreviewProps> = observer(({ url }) => {
           }}
         />
       </Grid>
-      <Grid item container direction="column">
-        <Grid item>
-          <FormControlLabel
-            label="Use original aspect ratio"
-            control={
-              <Checkbox
-                checked={store.lockAspectRatio.get()}
-                onChange={(_, checked) => store.lockAspectRatio.set(checked)}
-              />
-            }
-          />
+      <Grid item container direction="column" spacing={2}>
+        <Grid item container direction="column" spacing={0}>
+          <Grid item>
+            <FormControlLabel
+              label="Use original aspect ratio"
+              control={
+                <Checkbox
+                  checked={store.lockAspectRatio.get()}
+                  onChange={(_, checked) => store.lockAspectRatio.set(checked)}
+                />
+              }
+            />
+          </Grid>
+          <Grid item>
+            <TextField
+              label="Width"
+              disabled={!store.sourceLoaded.get()}
+              value={store.outputWidth.get()}
+              type="number"
+              onChange={(evt) => {
+                const width = evt.target.value;
+                store.onWidthChange(width);
+              }}
+              variant="filled"
+              size="small"
+            />
+          </Grid>
+          <Grid item>
+            <TextField
+              label="Height"
+              disabled={!store.sourceLoaded.get()}
+              value={store.outputHeight.get()}
+              type="number"
+              onChange={(evt) => {
+                const height = evt.target.value;
+                store.onHeightChange(height);
+              }}
+              variant="filled"
+              size="small"
+            />
+          </Grid>
         </Grid>
-        <Grid item>
-          <TextField
-            label="Width"
-            disabled={!store.sourceLoaded.get()}
-            value={store.outputWidth.get()}
-            type="number"
-            onChange={(evt) => {
-              const width = evt.target.value;
-              store.onWidthChange(width);
-            }}
-            variant="filled"
-            size="small"
-          />
-        </Grid>
-        <Grid item>
-          <TextField
-            label="Height"
-            disabled={!store.sourceLoaded.get()}
-            value={store.outputHeight.get()}
-            type="number"
-            onChange={(evt) => {
-              const height = evt.target.value;
-              store.onHeightChange(height);
-            }}
-            variant="filled"
-            size="small"
-          />
-        </Grid>
-        <Grid item>
-          <Typography id="white-threshold-label" gutterBottom>
-            White threshold
-          </Typography>
-          <Slider
-            aria-labelledby="white-threshold-label"
-            value={store.whiteThreshold.get()}
-            onChange={(_, val) => store.whiteThreshold.set(val as number)}
-            min={0}
-            max={255}
-            valueLabelDisplay="auto"
-          />
-          <FormControlLabel
-            label="Invert"
-            control={
-              <Checkbox
-                checked={store.invert.get()}
-                onChange={(_, checked) => store.invert.set(checked)}
-              />
-            }
-          />
+        <Grid item container direction="column" spacing={0}>
+          <Grid item>
+            <Typography id="white-threshold-label" gutterBottom>
+              White threshold:
+            </Typography>
+            <Slider
+              sx={{ maxWidth: "223px" }}
+              aria-labelledby="white-threshold-label"
+              value={store.whiteThreshold.get()}
+              onChange={(_, val) => store.whiteThreshold.set(val as number)}
+              min={0}
+              max={255}
+              valueLabelDisplay="auto"
+            />
+          </Grid>
+          <Grid item>
+            <FormControlLabel
+              label="Invert"
+              control={
+                <Checkbox
+                  checked={store.invert.get()}
+                  onChange={(_, checked) => store.invert.set(checked)}
+                />
+              }
+            />
+          </Grid>
         </Grid>
       </Grid>
       <Grid item container direction="column" spacing={1}>
         <Grid item>
           <Typography>Quokka monochrome preview:</Typography>
-          <div className={classes.previewBorder}>
-            <canvas className={classes.previewCanvas} ref={setDestinationRef} />
-          </div>
+          <Box
+            sx={{
+              borderWidth: 1,
+              borderStyle: "solid",
+              borderColor: "black",
+              width: 128,
+              height: 64,
+            }}
+          >
+            <Box
+              component="canvas"
+              sx={{
+                verticalAlign: "top",
+              }}
+              ref={setDestinationRef}
+            />
+          </Box>
         </Grid>
         <Grid item>
           <Button

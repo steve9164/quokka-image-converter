@@ -4,9 +4,9 @@ import {
   createTheme,
   Divider,
   Grid,
-  GridList,
-  GridListTile,
-  GridListTileBar,
+  ImageList,
+  ImageListItem,
+  ImageListItemBar,
   IconButton,
   makeStyles,
   responsiveFontSizes,
@@ -14,8 +14,8 @@ import {
   ThemeProvider,
   Typography,
   useMediaQuery,
-} from "@material-ui/core";
-import DeleteIcon from "@material-ui/icons/Delete";
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { isObservableArray, observable } from "mobx";
 import { observer, useLocalObservable } from "mobx-react-lite";
 import React, { useState } from "react";
@@ -23,24 +23,6 @@ import FileDropZone from "./FileDropZone";
 import ImagePreview from "./ImagePreview";
 
 const theme = responsiveFontSizes(createTheme(), { factor: 3 });
-
-const useAppStyles = makeStyles((theme) => ({
-  gridList: {
-    flexWrap: "nowrap",
-    transform: "translateZ(0)",
-  },
-  restrictGridWidth: {
-    // Hacky, but needed, otherwise the GridList breaks horizontally out of the page
-    maxWidth: "calc(100vw - 32px)",
-  },
-  title: {
-    color: theme.palette.primary.light,
-  },
-  titleBar: {
-    background:
-      "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 70%, rgba(0,0,0,0) 100%)",
-  },
-}));
 
 interface IDraggedImage {
   readonly data: string;
@@ -54,37 +36,9 @@ interface INamedImage {
 
 const DEFAULT_URL = "/example-star.png";
 
-// const createStore = () => ({
-//   urls: observable.box([DEFAULT_URL]),
-//   addUrl(url: string) {
-//     this.urls.set([...this.urls.get(), url]);
-//   },
-//   deleteUrl(index: number) {
-//     const cloned = this.urls.get().slice();
-//     cloned.splice(index, 1);
-//     this.urls.set(cloned);
-//   },
-//   imageUrl: observable.box(DEFAULT_URL),
-//   localImages: observable.box([] as IDraggedImage[]),
-//   addLocalImage(file: File) {
-//     const reader = new FileReader();
-//     const name = file.name;
-//     reader.onerror = () => console.log("file reading has failed");
-//     reader.onload = (e) => {
-//       const data = reader.result! as string;
-//       this.localImages.set([...this.localImages.get(), { name, data }]);
-//     };
-//     reader.readAsDataURL(file);
-//     console.log(isObservableArray(this.localImages));
-//   },
-//   deleteLocalImage(index: number) {
-//     this.localImages.get().splice(index, 1);
-//   },
-// });
-
 const App: React.FC = observer(() => {
   const store = useLocalObservable(() => ({
-    images: [{ name: DEFAULT_URL, url: DEFAULT_URL }] as INamedImage[],
+    images: [] as INamedImage[],
     addImage(name: string, url: string) {
       this.images.push({ name, url });
     },
@@ -103,11 +57,8 @@ const App: React.FC = observer(() => {
       this.activeImageIndex = index;
     },
   }));
-  // const [store] = useState(createStore());
   const [textboxUrl, setTextboxUrl] = useState("");
-
-  const classes = useAppStyles();
-
+  // const classes = useAppStyles();
   const smOrLarger = useMediaQuery(theme.breakpoints.up("sm"));
 
   return (
@@ -119,50 +70,54 @@ const App: React.FC = observer(() => {
               <Typography variant="h2">Quokka Image Converter</Typography>
             </Grid>
 
-            <Grid item className={classes.restrictGridWidth}>
+            <Grid
+              item
+              sx={{
+                // Hacky, but needed, otherwise the GridList breaks horizontally out of the page
+                maxWidth: "calc(100vw - 32px)",
+              }}
+            >
               <Typography>
                 Choose from a loaded image below or load another by dragging and
                 dropping it onto this window or entering the URL of the image
               </Typography>
-              <GridList
-                className={classes.gridList}
+              <ImageList
+                sx={{
+                  flexWrap: "nowrap",
+                  transform: "translateZ(0)",
+                }}
                 cols={smOrLarger ? 4 : 2}
-                spacing={2}
+                gap={2}
               >
                 {store.images.map(({ name, url }, i) => (
-                  <GridListTile key={url}>
+                  <ImageListItem key={url}>
                     <img
                       src={url}
                       alt={name}
                       onClick={() => store.setActiveImageIndex(i)}
                     />
-                    <GridListTileBar
+                    <ImageListItemBar
                       title={name}
-                      classes={{
-                        root: classes.titleBar,
-                        title: classes.title,
+                      sx={{
+                        background:
+                          "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 70%, rgba(0,0,0,0) 100%)",
+
+                        "& .MuiImageListItemBar-title": {
+                          color: "primary.light",
+                        },
                       }}
                       actionIcon={
                         <IconButton
                           aria-label={`delete ${name}`}
                           onClick={() => store.removeImage(i)}
                         >
-                          <DeleteIcon className={classes.title} />
+                          <DeleteIcon sx={{ color: "primary.light" }} />
                         </IconButton>
                       }
                     />
-                  </GridListTile>
+                  </ImageListItem>
                 ))}
-                {/* {store.localImages.get().map(({ name, data }) => (
-                  <GridListTile key={data}>
-                    <img
-                      alt={name}
-                      src={data}
-                      onClick={() => store.imageUrl.set(data)}
-                    />
-                  </GridListTile>
-                ))} */}
-              </GridList>
+              </ImageList>
             </Grid>
             <Grid item>
               <form
@@ -183,16 +138,35 @@ const App: React.FC = observer(() => {
                     />
                   </Grid>
                   <Grid item>
-                    <Button type="submit" variant="contained" size="medium">
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      size="medium"
+                      disabled={
+                        !textboxUrl ||
+                        store.images.some(({ url }) => url === textboxUrl)
+                      }
+                    >
                       Add image
                     </Button>
                   </Grid>
+                  {store.images.length === 0 && (
+                    <Grid item>
+                      <Button
+                        variant="contained"
+                        size="medium"
+                        onClick={() => store.addImage(DEFAULT_URL, DEFAULT_URL)}
+                      >
+                        Add an example image
+                      </Button>
+                    </Grid>
+                  )}
                 </Grid>
               </form>
             </Grid>
             {store.images.length > 0 && (
               <>
-                <Divider />
+                <Divider sx={{ marginTop: 2 }} />
                 <Grid item>
                   <ImagePreview
                     url={store.images[store.activeImageIndex].url}
