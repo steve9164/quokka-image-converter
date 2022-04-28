@@ -1,33 +1,26 @@
+import DeleteIcon from "@mui/icons-material/Delete";
 import {
   Button,
   Container,
   createTheme,
   Divider,
   Grid,
+  IconButton,
   ImageList,
   ImageListItem,
   ImageListItemBar,
-  IconButton,
-  makeStyles,
   responsiveFontSizes,
   TextField,
   ThemeProvider,
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { isObservableArray, observable } from "mobx";
 import { observer, useLocalObservable } from "mobx-react-lite";
 import React, { useState } from "react";
 import FileDropZone from "./FileDropZone";
 import ImagePreview from "./ImagePreview";
 
 const theme = responsiveFontSizes(createTheme(), { factor: 3 });
-
-interface IDraggedImage {
-  readonly data: string;
-  readonly name: string;
-}
 
 interface INamedImage {
   readonly name: string;
