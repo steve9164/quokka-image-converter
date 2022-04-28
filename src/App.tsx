@@ -34,6 +34,7 @@ const App: React.FC = observer(() => {
     images: [] as INamedImage[],
     addImage(name: string, url: string) {
       this.images.push({ name, url });
+      if (this.activeImageIndex === undefined) this.setActiveImageIndex(0);
     },
     addImageFromFile(file: File) {
       this.addImage(file.name, URL.createObjectURL(file));
@@ -41,12 +42,14 @@ const App: React.FC = observer(() => {
     removeImage(index: number) {
       // revokeObjectURL is a no-op if the URL is not an object URL, and frees the object URL if it is
       URL.revokeObjectURL(this.images.splice(index, 1)[0].url);
-      if (index < this.activeImageIndex) {
-        this.setActiveImageIndex(this.activeImageIndex - 1);
+      if (index <= this.activeImageIndex!) {
+        this.setActiveImageIndex(
+          this.images.length === 0 ? undefined : this.activeImageIndex! - 1
+        );
       }
     },
-    activeImageIndex: 0,
-    setActiveImageIndex(index: number) {
+    activeImageIndex: undefined as number | undefined,
+    setActiveImageIndex(index: number | undefined) {
       this.activeImageIndex = index;
     },
   }));
@@ -162,7 +165,7 @@ const App: React.FC = observer(() => {
                 <Divider sx={{ marginTop: 2 }} />
                 <Grid item>
                   <ImagePreview
-                    url={store.images[store.activeImageIndex].url}
+                    url={store.images[store.activeImageIndex!].url}
                   />
                 </Grid>
               </>
